@@ -340,6 +340,8 @@ html:not(.field-ready) .front .field-bar {background: var(--paper); color: var(-
 .is-staged .service-content:not([inert]) a {pointer-events: auto}
 .is-staged .service-content .minor-link {margin: 12px 0 0}
 .is-staged .service-content h3 {font-size: clamp(25px,3.45vw,66px)}
+#service-grade .spread-copy {container-type: inline-size}
+#service-grade h3 {font-size: clamp(18px, 8.4cqi, 60px)}
 .is-stacked .spread-copy {left: 0; top: calc(var(--photo-band) + 12px); width: 100%; max-width: none; transform: none}
 @media(max-width:980px) {
  .is-staged .service-content .button {padding: 8px 14px; min-height: 44px}
