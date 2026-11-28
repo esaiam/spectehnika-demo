@@ -147,7 +147,7 @@ if (scene) {
   let movingFocus = false;
 
   function measureServices() {
-    const staged = !motion.matches && !compactLayout.matches && cards.length === 2;
+    const staged = !motion.matches && !compactLayout.matches && cards.length > 1;
     const width = track.clientWidth;
     const stacked = width < 600;
     track.classList.toggle('is-staged', staged);
@@ -165,7 +165,10 @@ if (scene) {
         panel.style.removeProperty('opacity');
         panel.style.removeProperty('visibility');
       }
-      for (const photo of photos) photo.style.removeProperty('transform');
+      for (const photo of photos) {
+        photo.style.removeProperty('transform');
+        photo.style.removeProperty('visibility');
+      }
       return;
     }
 
@@ -183,7 +186,7 @@ if (scene) {
     const scrollBand = stacked ? band : Math.max(needed, Math.min(room, width * .77));
     const geometry = {'--stage-height': height, '--photo-band': band, '--image-width': imgWidth,
       '--image-height': imgHeight, '--image-x': imgX, '--image-y': imgY,
-      '--stage-run': Math.min(unit * .71, Math.max(unit * .62, scrollBand * .94))};
+      '--stage-run': (cards.length - 1) * Math.min(unit * .71, Math.max(unit * .62, scrollBand * .94))};
     for (const [name, value] of Object.entries(geometry)) track.style.setProperty(name, value + 'px');
 
     const top = terms.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(services).paddingBottom) - track.offsetHeight;
@@ -195,9 +198,11 @@ if (scene) {
   function drawServices() {
     if (!gallery) return;
     const {start, run, imgX, imgY, imgWidth, imgHeight, width} = gallery;
-    const p = clamp((scrollY - start) / run);
-    if (p === lastGalleryProgress) return;
-    lastGalleryProgress = p;
+    const progress = clamp((scrollY - start) / run) * (cards.length - 1);
+    const current = Math.min(Math.floor(progress), cards.length - 2);
+    const p = progress - current;
+    if (progress === lastGalleryProgress) return;
+    lastGalleryProgress = progress;
 
     // The outgoing image contracts toward the upper left while the next
     // grows from the baseline. The remaining thumbnail then clears the top.
@@ -207,8 +212,17 @@ if (scene) {
     const exit = smooth(clamp((p - .78) / .18));
     const outgoingScale = (1 - (1 - thumb) * slide) * (1 - exit);
     const lift = imgY * slide + (thumb * imgHeight + 2) * exit;
-    photos[0].style.transform = `translate(${-imgX * slide}px, ${-lift}px) scale(${outgoingScale})`;
-    photos[1].style.transform = `translateX(${(imgWidth + gap) * (1 - slide)}px) scale(${thumb + (1 - thumb) * slide})`;
+    photos.forEach((photo, index) => {
+      const offset = index - current;
+      photo.style.visibility = offset < 0 || offset > 2 ? 'hidden' : 'visible';
+      if (offset === 0) {
+        photo.style.transform = `translate(${-imgX * slide}px, ${-lift}px) scale(${outgoingScale})`;
+      } else if (offset === 1 || offset === 2) {
+        const scale = offset === 1 ? thumb + (1 - thumb) * slide : thumb * exit;
+        const x = (imgWidth + gap) * (offset === 1 ? 1 - slide : 1);
+        photo.style.transform = `translate(${x}px, ${imgHeight * (1 - scale)}px) scale(${scale})`;
+      }
+    });
 
     // Change captions as the incoming photo takes over the frame.
     const handoff = .435;
@@ -217,7 +231,7 @@ if (scene) {
       smooth(clamp((p - handoff) / (.53 - handoff)))
     ];
     panels.forEach((panel, index) => {
-      const opacity = opacities[index];
+      const opacity = opacities[index - current] ?? 0;
       const unavailable = opacity < .5;
       if (unavailable && panel.contains(document.activeElement)) {
         movingFocus = true;
